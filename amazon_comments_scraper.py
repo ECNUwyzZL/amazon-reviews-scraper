@@ -11,10 +11,6 @@ def run(search, input_product_ids_filename):
             logging.info('{} product ids were found.'.format(len(product_ids)))
             reviews_counter = 0
             for product_id in product_ids:
-                _, exist = get_reviews_filename(product_id)
-                if exist:
-                    logging.info('product id [{}] was already fetched. Skipping.'.format(product_id))
-                    continue
                 reviews = get_comments_with_product_id(product_id)
                 reviews_counter += len(reviews)
                 logging.info('{} reviews found so far.'.format(reviews_counter))
