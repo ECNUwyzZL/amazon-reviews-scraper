@@ -6,74 +6,76 @@ import os
 import json
 from mail import send
 
-from constants import AMAZON_BASE_URL
 from core_utils import *
 
 
 # https://www.amazon.co.jp/product-reviews/B00Z16VF3E/ref=cm_cr_arp_d_paging_btm_1?ie=UTF8&reviewerType=all_reviews&showViewpoints=1&sortBy=helpful&pageNumber=1
 
-def get_product_reviews_url(item_id, page_number=None):
+def get_product_reviews_url(AMAZON_BASE_URL, item_id, page_number=None):
     if not page_number:
         page_number = 1
     return AMAZON_BASE_URL + '/product-reviews/{}/ref=' \
                              'cm_cr_arp_d_paging_btm_1?ie=UTF8&reviewerType=all_reviews' \
-                             '&showViewpoints=1&sortBy=helpful&pageNumber={}'.format(
+                             '&showViewpoints=1&sortBy=recent&pageNumber={}'.format(
         item_id, page_number)
 
 
-def get_comments_based_on_keyword(search):
+def get_comments_based_on_keyword(AMAZON_BASE_URL, search):
     logging.info('SEARCH = {}'.format(search))
     url = AMAZON_BASE_URL + '/s/ref=nb_sb_noss_2?url=search-alias%3Daps&field-keywords=' + \
           search + '&rh=i%3Aaps%2Ck%3A' + search
-    soup = get_soup(url)
+    soup = get_soup(AMAZON_BASE_URL, url)
 
     product_ids = [div.attrs['data-asin'] for div in soup.find_all('div') if 'data-index' in div.attrs]
     logging.info('Found {} items.'.format(len(product_ids)))
     for product_id in product_ids:
         logging.info('product_id is {}.'.format(product_id))
-        reviews = get_comments_with_product_id(product_id)
+        reviews = get_comments_with_product_id(AMAZON_BASE_URL, product_id)
         logging.info('Fetched {} reviews.'.format(len(reviews)))
         persist_comment_to_disk(reviews)
 
 
-def get_comments_with_product_id(product_id):
+def get_comments_with_product_id(AMAZON_BASE_URL, product_id):
     reviews = list()
     if product_id is None:
         return reviews
     if not re.match('^[A-Z0-9]{10}$', product_id):
         return reviews
 
-    product_reviews_link = get_product_reviews_url(product_id)
-    so = get_soup(product_reviews_link)
-    max_review_number = so.find(attrs={'data-hook': 'total-review-count'})
+    product_reviews_link = get_product_reviews_url(AMAZON_BASE_URL, product_id)
+    so = get_soup(AMAZON_BASE_URL, product_reviews_link)
+    max_review_number = so.find(attrs={'data-hook': 'cr-filter-info-review-count'})
     if max_review_number is None:
         return reviews
-
-    max_review_number = ''.join([el for el in max_review_number.text if el.isdigit()])
-    # print(max_page_number)
-    max_review_number = int(max_review_number) if max_review_number else 1
-
+    max_review_number = max_review_number.text.replace(u'\xa0', u' ').encode('utf-8')
+    max_review_number = str(max_review_number)
+    dt = max_review_number.split(' ')
+    for i in dt:
+        if i.isdigit():
+            max_review_number = int(i)
+            break
     max_page_number = max_review_number * 0.1  # displaying 10 results per page. So if 663 results then ~66 pages.
     max_page_number = math.ceil(max_page_number)
-
+    print(max_review_number, "\n")
     filename, is_exsits = get_reviews_filename(product_id)
     is_exsits = os.path.exists(filename)
     if is_exsits:
         li = list()
         f = open(filename, encoding='utf-8')
         text = json.load(f)
+        f.close()
         number = len(text)
-        print(max_review_number,"\n")
         print(number)
         if number < max_review_number:
             for item in text:
                 li.append(item['review_url'])
             hashlist = set(li)
             now_page = math.ceil(number * 0.1)
-            for page_number in range(now_page, max_page_number + 1):
+            for page_number in range(now_page, max_page_number):
+                page_number = max_page_number - page_number + 1
                 if page_number > 1:
-                    product_reviews_link = get_product_reviews_url(product_id, page_number)
-                    so = get_soup(product_reviews_link)
+                    product_reviews_link = get_product_reviews_url(AMAZON_BASE_URL, product_id, page_number)
+                    so = get_soup(AMAZON_BASE_URL, product_reviews_link)
 
                 cr_review_list_so = so.find(id='cm_cr-review_list')
 
@@ -89,7 +91,6 @@ def get_comments_with_product_id(product_id):
 
                 for review in reviews_list:
                     review_url = review.find(attrs={'data-hook': 'review-title'}).attrs['href']
-                    print(review_url)
                     if review_url in hashlist:
                         continue
                     else:
@@ -124,7 +125,6 @@ def get_comments_with_product_id(product_id):
                                         'review_url': review_url,
                                         'review_date': review_date,
                                         })
-                        print(review_url)
                         reviews.append(review_text)
                         rating_war = int(rating)
                         if rating_war < 3:
@@ -134,8 +134,8 @@ def get_comments_with_product_id(product_id):
     else:
         for page_number in range(1, max_page_number + 1):
             if page_number > 1:
-                product_reviews_link = get_product_reviews_url(product_id, page_number)
-                so = get_soup(product_reviews_link)
+                product_reviews_link = get_product_reviews_url(AMAZON_BASE_URL, product_id, page_number)
+                so = get_soup(AMAZON_BASE_URL, product_reviews_link)
 
             cr_review_list_so = so.find(id='cm_cr-review_list')
 
@@ -187,6 +187,6 @@ def get_comments_with_product_id(product_id):
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-    _reviews = get_comments_with_product_id('B00BV0W8RQ')
+    _reviews = get_comments_with_product_id('https://www.amazon.com', 'B00BV0W8RQ')
     print(_reviews)
     persist_comment_to_disk(_reviews)

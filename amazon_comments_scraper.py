@@ -5,20 +5,25 @@ from core_utils import *
 
 
 def run(search, input_product_ids_filename):
+    product_ids = list()
     if input_product_ids_filename is not None:
         with open(input_product_ids_filename, 'r') as r:
-            product_ids = [p.strip() for p in r.readlines()]
+            for p in r.readlines():
+                pro_obj = p.strip('\n').split(' ')
+                #print(pro_obj)
+                product_ids.append(pro_obj)
             logging.info('{} product ids were found.'.format(len(product_ids)))
             reviews_counter = 0
             for product_id in product_ids:
-                reviews = get_comments_with_product_id(product_id)
+                reviews = get_comments_with_product_id(product_id[1],product_id[0])
                 reviews_counter += len(reviews)
                 logging.info('{} reviews found so far.'.format(reviews_counter))
-                persist_comment_to_disk(reviews)
+                if reviews is not None:
+                    persist_comment_to_disk(reviews)
     else:
         default_search = 'iPhone'
         search = default_search if search is None else search
-        reviews = get_comments_based_on_keyword(search)
+        reviews = get_comments_based_on_keyword('https://www.amazon.com', search)
         persist_comment_to_disk(reviews)
 
 
