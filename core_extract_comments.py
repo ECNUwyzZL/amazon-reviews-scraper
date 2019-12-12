@@ -100,6 +100,7 @@ def get_comments_with_product_id(AMAZON_BASE_URL, product_id):
                         title = review.find(attrs={'data-hook': 'review-title'}).text.strip()
                         author_url = review.find(attrs={'data-hook': 'genome-widget'}).find('a', href=True)
                         review_date = review.find(attrs={'data-hook': 'review-date'}).text.strip()
+                        author_name = review.find(attrs={'data-hook': 'genome-widget'}).find(attrs={'class': 'a-profile-content'}).text
                         if author_url:
                             author_url = author_url['href'].strip()
                         try:
@@ -121,13 +122,14 @@ def get_comments_with_product_id(AMAZON_BASE_URL, product_id):
                                         'rating': rating,
                                         'body': body,
                                         'product_id': product_id,
-                                        'author_url': author_url,
-                                        'review_url': review_url,
+                                        'author_url': AMAZON_BASE_URL + author_url,
+                                        'review_url': AMAZON_BASE_URL + review_url,
                                         'review_date': review_date,
+                                        'author_name': author_name,
                                         })
                         reviews.append(review_text)
                         rating_war = int(rating)
-                        if rating_war < 3:
+                        if rating_war <= 3:
                             send(review_text)
         else:
             logging.info('no further reviews')
@@ -154,6 +156,7 @@ def get_comments_with_product_id(AMAZON_BASE_URL, product_id):
                 body = review.find(attrs={'data-hook': 'review-body'}).text.strip()
                 title = review.find(attrs={'data-hook': 'review-title'}).text.strip()
                 author_url = review.find(attrs={'data-hook': 'genome-widget'}).find('a', href=True)
+                author_name = review.find(attrs={'data-hook': 'genome-widget'}).find(attrs={'class':'a-profile-content'}).text
                 review_url = review.find(attrs={'data-hook': 'review-title'}).attrs['href']
                 review_date = review.find(attrs={'data-hook': 'review-date'}).text.strip()
                 if author_url:
@@ -174,14 +177,19 @@ def get_comments_with_product_id(AMAZON_BASE_URL, product_id):
                 logging.info('REVIEW URL  = ' + review_url if review_url else '')
                 logging.info('REVIEW DATE  = ' + review_date if review_date else '')
                 logging.info('***********************************************\n')
-                reviews.append({'title': title,
+                review_text = ({'title': title,
                                 'rating': rating,
                                 'body': body,
                                 'product_id': product_id,
-                                'author_url': author_url,
-                                'review_url': review_url,
+                                'author_url': AMAZON_BASE_URL + author_url,
+                                'review_url': AMAZON_BASE_URL + review_url,
                                 'review_date': review_date,
+                                'author_name': author_name,
                                 })
+                reviews.append(review_text)
+                rating_war = int(rating)
+                if rating_war <= 3:
+                    send(review_text)
     return reviews
 
 

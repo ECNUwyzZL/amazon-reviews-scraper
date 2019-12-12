@@ -86,6 +86,7 @@ def get_soup(AMAZON_BASE_URL, url):
     }
     logging.debug('-> to Amazon : {}'.format(url))
     out = requests.get(url, headers=header)
+    print(url)
     assert out.status_code == 200
     soup = BeautifulSoup(out.content, 'lxml')
     while 'captcha' in str(soup):
