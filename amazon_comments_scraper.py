@@ -20,6 +20,7 @@ def run(search, input_product_ids_filename):
                 logging.info('{} reviews found so far.'.format(reviews_counter))
                 if reviews is not None:
                     persist_comment_to_disk(reviews)
+            return 0
     else:
         default_search = 'iPhone'
         search = default_search if search is None else search

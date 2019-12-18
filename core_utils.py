@@ -10,7 +10,7 @@ from bs4 import BeautifulSoup
 from const import *
 
 
-OUTPUT_DIR = 'comments'
+OUTPUT_DIR = '/home/zhanglun/amazon-reviews-scraper/comments'
 
 if not os.path.exists(OUTPUT_DIR):
     os.makedirs(OUTPUT_DIR)
@@ -39,7 +39,7 @@ def persist_comment_to_disk(reviews):
     assert len(product_id_set) == 1, 'all product ids should be the same in the reviews list.'
     product_id = next(iter(product_id_set))
     output_filename, exist = get_reviews_filename(product_id)
-    dir_exist = os.path.exists('./' + OUTPUT_DIR)
+    dir_exist = os.path.exists(OUTPUT_DIR)
     if not dir_exist:
         mkdir_p(OUTPUT_DIR)
     if reviews is not None:
@@ -75,6 +75,7 @@ def extract_product_id(link_from_main_page):
 
 def get_soup(AMAZON_BASE_URL, url):
     temp = 0
+    ttemp = 0
     if AMAZON_BASE_URL not in url:
         url = AMAZON_BASE_URL + url
     nap_time_sec = 1
@@ -85,8 +86,7 @@ def get_soup(AMAZON_BASE_URL, url):
         'User-Agent': User_Agent
     }
     logging.debug('-> to Amazon : {}'.format(url))
-    out = requests.get(url, headers=header)
-    print(url)
+    out = requests.get(url, headers=header, timeout=30)
     assert out.status_code == 200
     soup = BeautifulSoup(out.content, 'lxml')
     while 'captcha' in str(soup):
@@ -97,10 +97,21 @@ def get_soup(AMAZON_BASE_URL, url):
             'User-Agent': User_Agent
         }
         logging.debug('-> to Amazon : {}'.format(url))
-        out = requests.get(url, headers=header)
+        if ttemp!=0:
+            out = requests.get(url, headers=header, proxies = proxies, timeout=30)
+        else:
+            out = requests.get(url, headers=header, timeout=30)
         assert out.status_code == 200
         soup = BeautifulSoup(out.content, 'lxml')
         if (temp == 17):
-            logging.info("ip banned")
-            break
+            logging.info("ip change")
+            ipget = requests.get("http://127.0.0.1:5010/get/")
+            proxy = ipget.json()
+            ip_proxy = proxy['proxy']
+            proxies = {
+                'http': ip_proxy
+            }
+            ttemp = 1
+            temp = -1
     return soup
+

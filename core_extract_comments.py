@@ -57,6 +57,7 @@ def get_comments_with_product_id(AMAZON_BASE_URL, product_id):
     max_page_number = max_review_number * 0.1  # displaying 10 results per page. So if 663 results then ~66 pages.
     max_page_number = math.ceil(max_page_number)
     print(max_review_number, "\n")
+    print(product_id)
     filename, is_exsits = get_reviews_filename(product_id)
     is_exsits = os.path.exists(filename)
     if is_exsits:
